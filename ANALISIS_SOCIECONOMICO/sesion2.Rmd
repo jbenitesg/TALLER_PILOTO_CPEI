@@ -1,5 +1,5 @@
 ---
-title: "ANÁLISIS SOCIOECONÓMICO aplicado a la ENAHO"
+title: "Análisis socioeconómico aplicado a la ENAHO"
 author: "Josue Benites - Dirección Económica CPEI"
 output: github_document
 ---
@@ -8,24 +8,107 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## GitHub Documents
 
-This is an R Markdown format used for publishing markdown documents to GitHub. When you click the **Knit** button all R code chunks are run and a markdown file (.md) suitable for publishing to GitHub is generated.
+# Información general
+## Sobre la fuente de datos
+Los datos a utilizar serán recolectados del [portal de Microdatos del INEI](http://iinei.inei.gob.pe/microdatos/). Seleccionaremos la Encuesta Nacional de Hogares (ENAHO) para los diversos módulos de los periodos 2018-2020. 
+![microdatos](./inputs/microdatos.png){width=100%}
 
-## Including Code
-
-You can include R code in the document as follows:
-
-```{r cars}
-summary(cars)
+```{r}
+options(scipen=999)
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+setwd("E:/GITHUB/TALLER_PILOTO_CPEI/ANALISIS_SOCIECONOMICO")
+inputs<-"inputs/"
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r warning=FALSE}
+library(haven)
+library(dplyr)
+library(reshape2)
+library(scales)
+library(ggplot2)
+library(weights)
+library(Hmisc)
+```
+
+```{r}
+mod100<-haven::read_dta(paste0(inputs,"enaho01-2019-100.dta"))
+```
+```{r}
+head(mod100)
+```
+```{r}
+mod100<-mod100%>%
+  filter(result<=2)
+```
+
+
+```{r}
+weights::wpct(mod100$p105a,mod100$factor07)
+```
+```{r}
+mod100%>%
+  filter(p105a>0)%>%
+  count(aÑo,p105a,wt=factor07)%>%
+  mutate(porcentaje=n/sum(n))%>%
+  ggplot(aes(y=aÑo,fill=as_factor(p105a),x=porcentaje))+
+  scale_x_continuous(labels=scales::percent)+
+  geom_col()+coord_flip()+
+  labs(title = "Vivienda según tipo", 
+       subtitle = "(Distribución porcentual(%))",
+       fill = element_blank(), y= element_blank(),x= element_blank())
+```
+
+```{r}
+mod100%>%
+  count(p106,wt=factor07)%>%
+  mutate(percent=n/sum(n))%>%
+  filter(p106!="")%>%
+  ggplot(aes(x=p106,y=n))+
+  geom_col()+
+  labs(title = "Perú 2019: ¿Cuánto cree que le pagarían de alquiler \nmensual por la vivienda?", subtitle ="(en S/.)", x="Pago de alquiler mensual",y="Frecuencia")+
+  scale_y_continuous(labels=scales::comma)+
+  scale_x_continuous(breaks=seq(from=0,to=3000,by=500))
+```
+
+
+```{r}
+mod100%>%
+  mutate(nbi=rowSums(across(contains("nbi")),
+                     na.rm = T),
+         nbi=if_else(nbi>=3,1,
+                     if_else(nbi<3,0,NULL)))%>%
+  summarise_at(vars(contains("nbi")),
+               ~100*wtd.mean(.,weights = mod100$factor07, na.rm = T))
+```
+
+```{r}
+mod100%>%
+  mutate(nbi=rowSums(across(contains("nbi")),
+                     na.rm = T),
+         nbi=if_else(nbi>=1,1,
+                     if_else(nbi<1,0,NULL)))%>%
+  summarise_at(
+    vars(contains("nbi")),
+               ~100*wtd.mean(.,weights = factor07, na.rm = T))
+```
+
+```{r}
+mod100%>%
+  mutate(nbi=rowSums(across(contains("nbi")),
+                     na.rm = T),
+         nbi=if_else(nbi>=1,1,
+                     if_else(nbi<1,0,NULL)))%>%
+  group_by(dominio)%>%
+  dplyr::summarise(nbi=wtd.mean(nbi,weights = factor07, na.rm = T))%>%
+  ggplot(aes(y=as_factor(dominio),x=nbi, xmin=0, xmax=nbi))+
+  geom_pointrange()+
+  scale_x_continuous(labels=scales::percent)+
+  scale_y_discrete(limits = rev)+
+  theme_light()
+```
+
