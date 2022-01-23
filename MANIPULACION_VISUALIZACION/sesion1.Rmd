@@ -9,7 +9,18 @@ setwd("E:/GITHUB/TALLER_PILOTO_CPEI/MANIPULACION_VISUALIZACION")
 ```
 
 # Introducción
-Los paquetes a utilizar son los siguientes: 
+
+Instalamos los paquetes en caso no los tengamos **Quitar el #**
+```{r}
+#install.packages("readxl")
+#install.packages("readr") 
+#install.packages("archive")
+#install.packages("dplyr") 
+#install.packages("reshape2")
+#install.packages("ggplot2")
+#install.packages("scales")
+```
+Cargamos las librerías:
 ```{r warning=FALSE}
 library(readxl) #Leer formato xls, xlsx
 library(readr) #Leer csv, tsv
@@ -56,13 +67,22 @@ head(acceso_tic) # Muestra los primeros datos de la base
 ## Barrras horizontales
 
 Con el comando `scale_y_discrete(limits=rev)` logramos ordenar los departamentos de manera alfabética.
+
+```{r}
+acceso_tic%>%
+  ggplot(aes(y=Región, x=`2020`))+
+  geom_col()
+```
+
+
 ```{r}
 acceso_tic%>%
   ggplot(aes(y=Región, x=`2020`))+
   geom_col()+
   scale_y_discrete(limits = rev)+
-  labs(x="(% del total)",caption="Fuente: Censo Educativo del Ministerio de Educación.", title="Perú: Porcentaje de escuelas primarias que cuentan con acceso a Internet\n según departamento, 2020")+
-  theme_classic()+
+  labs(x="(% del total)",
+       caption="Fuente: Censo Educativo del Ministerio de Educación.", title="Perú: Porcentaje de escuelas primarias que cuentan con acceso a Internet\n según departamento, 2020")+
+  theme_bw()+
   theme(axis.title.y = element_blank(),
         plot.title = element_text(hjust = 0.5, size=09),
         axis.text.y = element_text(size=08))
@@ -95,6 +115,14 @@ peru_tic<-peru_tic%>%
 peru_tic
 ```
 Visualización de los datos en barra vertical como el anterior gráfico. 
+
+```{r}
+peru_tic%>%
+  ggplot(aes(Periodo, Ratio, label=round(Ratio,1)))+
+  geom_col()+geom_text()
+```
+
+
 ```{r}
 peru_tic%>%
   ggplot(aes(Periodo, Ratio, label=round(Ratio,1)))+
@@ -106,7 +134,6 @@ peru_tic%>%
 ```
 
 ```{r}
-td1 <- tempdir()
 download.file( "https://www.inei.gob.pe/media/MenuRecursivo/indices_tematicos/1-gasto-en-salud.xlsx",destfile = paste0(td1,"/","gasto_salud.xlsx"), mode = "wb")
 ```
 
@@ -137,7 +164,7 @@ gasto_salud%>%
 ```{r}
 gasto_salud%>%
   ggplot(aes(x=Año,y=Gasto))+
-  geom_col(aes(fill=Tipo),position = "dodge")+
+  geom_col(aes(fill=Tipo), position = "dodge")+
   labs(title = "Gasto destinado al sector Salud según tipo, 2007-2020",
        subtitle ="(Millones de soles)")+
   scale_y_continuous(labels=scales::comma)+theme(legend.position = "top")
@@ -151,13 +178,12 @@ gasto_salud%>%
   geom_col(aes(fill=Tipo),position = "fill")+
   labs(title = "Gasto destinado al sector Salud según tipo, 2007-2020",
        subtitle ="(Porcentaje)")+
-  scale_y_continuous(labels=scales::percent)+theme(legend.position = "top")
+  scale_y_continuous(labels=scales::percent)+theme_bw()+theme(legend.position = "top")
 ```
 
 ## Gráficos de dispersión
 
 ```{r}
-td1 <- tempdir()
 download.file( "https://www.inei.gob.pe/media/MenuRecursivo/indices_tematicos/5.15a_1.xlsx",destfile = paste0(td1,"/","matricula_prim.xlsx"), mode = "wb")
 #Cargamos los datos
 primaria<-read_xlsx(paste0(td1,"/","matricula_prim.xlsx"),skip=15)%>%filter(...2!="")
@@ -166,6 +192,14 @@ names(primaria)[2:14]<-c(2008:2020)
 ```
 
 ### Scatter plot
+
+```{r}
+primaria%>%
+  ggplot(aes(x=`2008`,y=`2020`))+
+  geom_point()
+```
+
+
 ```{r}
 primaria%>%
   ggplot(aes(x=`2008`,y=`2020`))+
@@ -178,6 +212,12 @@ primaria%>%
 
 
 ### Gráfico de cajas
+```{r}
+primaria%>%
+  melt(vars.id=c("Departamento"), variable.name="Periodo", value.name = "Matricula")
+```
+
+
 ```{r}
 primaria%>%
   melt(vars.id=c("Departamento"), variable.name="Periodo", value.name = "Matricula")%>%
@@ -193,7 +233,8 @@ tf1 <- tempfile()
 td1<-tempdir()
 download.file("https://www.datosabiertos.gob.pe/sites/default/files/Bono600_DU_010_2021.zip", tf1)
 archive(tf1)
-bono600<-read_delim(archive_read(tf1, file = "Bono600_DU_010_2021.txt"), delim = "|")
+bono600<-read_delim(archive_read(tf1, file = "Bono600_DU_010_2021.txt"), 
+                    delim = "|")
 ```
 
 ```{r}
@@ -213,6 +254,14 @@ bono600%>%
   scale_y_discrete(limits=rev)+
   labs(y=element_blank(),x="Personas asignadas", title = "Distribución del padrón de `Bono 600` por región", subtitle = "(Millones de beneficiarios)")
 ```
+```{r}
+bono600%>%
+  ggplot()+
+  geom_bar(aes(y=DEPARTAMENTO))+
+  scale_x_continuous(labels = scales::label_number_si())+
+  scale_y_discrete(limits=rev)+
+  labs(y=element_blank(),x="Personas asignadas", title = "Distribución del padrón de `Bono 600` por región", subtitle = "(Millones de beneficiarios)")
+```
 
 ```{r}
 bono600%>%
@@ -222,6 +271,12 @@ bono600%>%
   scale_color_hue(name="Área", labels = c("Urbano","Rural"))+
   labs(y=element_blank(),x="Personas asignadas", title = "Distribución del padrón de `Bono 600` según edad", subtitle = "Departamento de Lima")
 ```
+```{r}
+bono600%>%
+  group_by(EDAD)%>%
+  count(EDAD)
+```
+
 
 ```{r}
 bono600%>%
@@ -237,6 +292,13 @@ bono600%>%
        y=element_blank(),
        x=element_blank())
 ```
+
+```{r}
+bono600 %>% 
+  group_by(GENERO)%>%
+  count(GENERO)
+```
+
 
 ```{r}
 bono600 %>% 
@@ -262,11 +324,20 @@ bono600 %>%
 ## Gráficos de línea
 
 ```{r}
+#install.packages("wbstats")
 library(wbstats)
 d_wb <- wb_data(c(gdp_capita ="NY.GDP.PCAP.CD"),
                 start_date = 2008, end_date = 2020,
              country = c("Peru","Bolivia"))
 ```
+
+```{r}
+d_wb%>%
+  ggplot(aes(x=date,gdp_capita,col=country, shape=country))+
+  geom_line()
+```
+
+
 ```{r}
 d_wb%>%
   ggplot(aes(x=date,gdp_capita,col=country, shape=country))+
@@ -274,9 +345,22 @@ d_wb%>%
   geom_point()+
   scale_y_continuous(labels =scales::comma)+
   scale_x_continuous(breaks= seq(from = 2008, to =2020, by = 1))+
+  theme_bw()+
   theme(legend.position = "top", legend.title =element_blank())+
   labs(y=element_blank(),x=element_blank(),title = "Evolución PBI per-cápita, 2008-2020",subtitle = "(US$ corrientes)")
 ```
+```{r}
+d_wb%>%
+  ggplot(aes(x=date,gdp_capita,col=country, shape=country))+
+  geom_line()+
+  scale_y_continuous(labels =scales::comma)+
+  scale_x_continuous(breaks= seq(from = 2008, to =2020, by = 1))+
+  labs(y=element_blank(),x=element_blank(),title = "Evolución PBI per-cápita, 2008-2020",subtitle = "(US$ corrientes)")+
+  facet_wrap(~country, ncol=2, scales="free_y")+
+  theme(legend.position = "none", axis.text.x = element_text(size=08, angle=90))
+
+```
+
 
 ```{r}
 d_wb%>%
